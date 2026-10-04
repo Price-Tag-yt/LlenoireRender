@@ -1,44 +1,144 @@
 name: Build LlenoireRender
+
 on:
   push:
+    branches:
+      - main
   pull_request:
+    branches:
+      - main
   workflow_dispatch:
-  release:
-    types: [published]
+
+permissions:
+  contents: read
 
 jobs:
   build:
+    name: Build Android APK
     runs-on: ubuntu-24.04
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+          cache-cleanup: on-success
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Show build environment
+        run: |
+          echo "=== Java ==="
+          java -version
+
+          echo "=== Gradle ==="
+          gradle --version
+
+          echo "=== Android SDK ==="
+          echo "$ANDROID_HOME"
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-      - name: Install SDK/NDK/CMake
+
+      - name: Accept Android SDK licenses
         run: |
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "cmake;3.22.1" "ndk;27.0.12077973"
+          yes | sdkmanager --licenses > /dev/null || true
+
+      - name: Install Android SDK / NDK / CMake
+        run: |
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "cmake;3.22.1" \
+            "ndk;27.0.12077973"
+
+      - name: Verify Android toolchain
+        run: |
+          echo "=== SDK packages ==="
+          sdkmanager --list_installed | grep -E \
+            "platform-tools|platforms;android-35|build-tools;35.0.0|cmake;3.22.1|ndk;27.0.12077973" \
+            || true
+
+          echo "=== Project ==="
+          ls -la
+
+          echo "=== App ==="
+          ls -la app
+
+          echo "=== Native ==="
+          ls -la native
+
+      - name: Clean previous build
+        run: |
+          ./gradlew --no-daemon clean --stacktrace
+
       - name: Build release APK
-        run: gradle --no-daemon :app:assembleRelease
-      - name: Verify APK and native ABIs
         run: |
-          test -f app/build/outputs/apk/release/app-release.apk
-          unzip -l app/build/outputs/apk/release/app-release.apk | grep -E 'lib/(arm64-v8a|armeabi-v7a|x86_64)/libLlenoireRender.so'
-          unzip -p app/build/outputs/apk/release/app-release.apk AndroidManifest.xml >/dev/null || true
+          ./gradlew \
+            --no-daemon \
+            --stacktrace \
+            --info \
+            :app:assembleRelease
+
+      - name: Verify APK
+        run: |
+          APK="app/build/outputs/apk/release/app-release.apk"
+
+          if [ ! -f "$APK" ]; then
+            echo "::error::APK was not generated"
+            find app/build -type f | sort || true
+            exit 1
+          fi
+
+          echo "APK generated:"
+          ls -lh "$APK"
+
+      - name: Verify native libraries
+        run: |
+          APK="app/build/outputs/apk/release/app-release.apk"
+
+          echo "=== Native libraries inside APK ==="
+
+          unzip -l "$APK" | grep "libLlenoireRender.so" || true
+
+          echo
+          echo "=== ABI verification ==="
+
+          unzip -l "$APK" | grep "lib/arm64-v8a/libLlenoireRender.so" || true
+          unzip -l "$APK" | grep "lib/armeabi-v7a/libLlenoireRender.so" || true
+          unzip -l "$APK" | grep "lib/x86_64/libLlenoireRender.so" || true
+
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: LlenoireRender-1.12.2-release
           path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
       - name: Upload native libraries
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: LlenoireRender-native-libs
-          path: app/build/intermediates/cmake/release/obj/**/libLlenoireRender.so
+          name: LlenoireRender-native-libraries
+          path: |
+            app/build/intermediates/cmake/release/obj/**
+            app/build/intermediates/stripped_native_libs/release/out/**
+          if-no-files-found: warn
+          retention-days: 30
+          compression-level: 0
+          
