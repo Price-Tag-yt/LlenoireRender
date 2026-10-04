@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+ <application android:allowBackup="false" android:label="@string/app_name" android:supportsRtl="true">
+  <activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>
+  <meta-data android:name="fclPlugin_V2" android:resource="@string/config"/>
+  <meta-data android:name="title_profile" android:resource="@string/title_profile"/>
+  <meta-data android:name="title_dynamic_resolution" android:resource="@string/title_dynamic_resolution"/>
+  <meta-data android:name="title_resolution_scale" android:resource="@string/title_resolution_scale"/>
+  <meta-data android:name="title_frame_pacing" android:resource="@string/title_frame_pacing"/>
+  <meta-data android:name="title_shader_cache" android:resource="@string/title_shader_cache"/>
+  <meta-data android:name="title_state_cache" android:resource="@string/title_state_cache"/>
+  <meta-data android:name="title_msaa" android:resource="@string/title_msaa"/>
+  <meta-data android:name="title_log_level" android:resource="@string/title_log_level"/>
+  <meta-data android:name="fclPlugin" android:value="true"/>
+  <meta-data android:name="renderer" android:value="LlenoireRender 1.12.2:libLlenoireRender.so:/libLlenoireRender.so"/>
+  <meta-data android:name="pojavEnv" android:value="LLR_PROFILE=BALANCED,POJAV_RENDERER=llenoire_1_12_2"/>
+  <meta-data android:name="boatEnv" android:value="LLR_PROFILE=BALANCED,POJAV_RENDERER=llenoire_1_12_2"/>
+  <meta-data android:name="minMCVer" android:value="1.12.2"/>
+  <meta-data android:name="maxMCVer" android:value="1.12.2"/>
+ </application>
+</manifest>
